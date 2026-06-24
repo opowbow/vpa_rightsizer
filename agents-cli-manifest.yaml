@@ -1,0 +1,14 @@
+name: "vpa_rightsizer"
+acli_version: "0.5.1"
+agent_directory: "."
+region: "europe-west1"
+base_template: "adk"
+generated_at: "2026-06-24T09:12:00Z"
+language: "python"
+create_params:
+  deployment_target: "agent_runtime"
+  session_type: "in_memory"
+  cicd_runner: "none"
+  include_data_ingestion: false
+  datastore: "none"
+  agent_guidance_filename: "AGENTS.md"
