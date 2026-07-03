@@ -1,7 +1,6 @@
 import os
 import shutil
 import subprocess
-
 import json
 import re
 
@@ -13,10 +12,14 @@ def compile_web_dashboard() -> str:
     Returns:
         A success message, or error details.
     """
-    report_path = "/home/user/agent-projects/vpa_rightsizer/results/vpa_recommendations_report.md"
-    output_path = "/home/user/vpa-web-report/public/vpa-data.json"
-    
     try:
+        # Resolve repo root path dynamically
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        report_path = os.path.join(repo_root, "results", "vpa_recommendations_report.md")
+        output_path = os.path.join(repo_root, "vpa-web-report", "public", "vpa-data.json")
+        results_dir = os.path.join(repo_root, "results")
+        web_report_dir = os.path.join(repo_root, "vpa-web-report")
+        
         print("Starting native Python Web Dashboard Generator task...")
         
         # 1. Parse markdown report into JSON database natively
@@ -51,7 +54,6 @@ def compile_web_dashboard() -> str:
                     continue
                     
                 parts = [p.strip() for p in line.split("|")]
-                # parts[0] is empty, parts[1] is Cluster Name, etc.
                 if len(parts) < 11:
                     continue
                     
@@ -89,6 +91,8 @@ def compile_web_dashboard() -> str:
                 if link_match:
                     manifest_name = link_match.group(1)
                     manifest_path = link_match.group(2)
+                    if manifest_name.lower() in ("yaml", "link") and manifest_path:
+                        manifest_name = os.path.basename(manifest_path.split("#")[0])
                 else:
                     manifest_name = clean(parts[10])
                     manifest_path = parts[10]
@@ -139,13 +143,12 @@ def compile_web_dashboard() -> str:
             json.dump(output_data, f, indent=2)
             
         # 2. Copy GKE manifests directories to the web build package dynamically
-        results_dir = "/home/user/agent-projects/vpa_rightsizer/results"
         copied_folders = []
         if os.path.exists(results_dir):
             for item in os.listdir(results_dir):
                 if item.startswith("vpa-") and os.path.isdir(os.path.join(results_dir, item)):
                     src_dir = os.path.join(results_dir, item)
-                    dest_dir = os.path.join("/home/user/vpa-web-report", item)
+                    dest_dir = os.path.join(web_report_dir, item)
                     if os.path.exists(dest_dir):
                         shutil.rmtree(dest_dir)
                     os.makedirs(dest_dir, exist_ok=True)
@@ -165,4 +168,5 @@ def compile_web_dashboard() -> str:
         )
     except Exception as ex:
         return f"ERROR: Unexpected exception compiling web dashboard natively: {ex}"
+
 
