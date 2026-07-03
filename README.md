@@ -80,16 +80,35 @@ These ready-to-apply files are saved locally under the git-ignored `results/vpa-
 
 ## 🛠️ Usage Instructions
 
-### 1. Run the Pipeline Locally
-To run the entire end-to-end scraper, dashboard builder, and Cloud Run deployment pipeline locally via the CLI:
+### 1. Run the Pipeline Locally via the Antigravity TUI
+
+To run the entire end-to-end scraper, dashboard builder, and deployment pipeline, launch the modern Antigravity CLI/TUI (`agy`) inside your workspace root:
 
 ```bash
-# With explicit project ID(s)
-agents-cli run --app-name vpa_rightsizer "Scan GKE clusters in project gkeop002, compile the dashboard, and deploy it to Cloud Run."
-
-# Without project ID (scapers will prompt for input dynamically)
-agents-cli run --app-name vpa_rightsizer "Scan GKE clusters, generate recommendations, and build the dashboard."
+# Start the Antigravity interactive environment
+agy
 ```
+
+From inside the interactive CLI, you can launch the dedicated `vpa_rightsizer` agent using either of the following patterns:
+
+```bash
+# Run interactively (the agent will ask for parameters and scan confirmation step-by-step)
+agy run vpa_rightsizer
+
+# Run with direct conversational instructions (parameters parsed dynamically)
+agy run vpa_rightsizer "Scan project op-hack-001 default namespace and deploy to Cloud Run"
+```
+
+#### 💡 Implicit Parameters & Smart Scopes
+The agent is designed to run with **zero hardcoding**. Target parameters can be defined implicitly:
+* **Project ID**: Automatically inherited from your active `gcloud config get-value project` configuration if omitted.
+* **Clusters**: Discovered automatically by scanning all active, running GKE clusters in your target project.
+* **Namespaces & Workloads**: Inherits default filters (e.g. `default` namespace) or checks prompt context.
+
+#### 🛡️ Scan Confirmation Behavior (Safe-by-Default)
+To prevent accidental overhead or scanning wrong targets, **the agent will always ask to confirm what resources are to be scanned before proceeding**, unless you explicitly override this behavior:
+* **To trigger confirmation prompts**: Simply run `agy run vpa_rightsizer` without arguments, or ask the agent to scan without explicit authorization. It will list detected clusters/namespaces and ask for a quick confirmation.
+* **To bypass confirmation**: Provide explicit instructions to scan everything (e.g., using terms like `"all"` or adding `--all` to your conversational prompt).
 
 ### 2. Deployment & Platform Publication
 To publish this agent on the **Gemini Enterprise Agent Platform**:
