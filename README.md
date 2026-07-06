@@ -22,6 +22,19 @@ An intelligent single-agent orchestrator built with the **Google Agent Developme
 
 ---
 
+## 🎯 Use Case
+
+Workload right-sizing is a critical pillar of Kubernetes cost reduction and resource optimization. 
+
+This tool is designed to gather and centrally surface workload sizing metrics across all workloads within your target projects, clusters, and namespaces. It achieves this regardless of the workload's existing configuration:
+- **With VPA configured**: Workloads already running with dedicated Vertical Pod Autoscaler (VPA) instances.
+- **On VPA-enabled clusters**: Workloads running on VPA-enabled GKE clusters but lacking explicit VPA resources.
+- **On non-VPA clusters**: Workloads running on clusters with no VPA enabled (utilizing fallback Cloud Monitoring metrics).
+
+A key differentiating step of this tool is its ability to automatically produce **valid, right-sized deployment files** for each discovered workload. These ready-to-use manifests can be seamlessly integrated back into your software release lifecycle process. This bridges the operational gap between **Application Teams** (who generally own the workload specifications) and **Operators** (who observe and manage resource inefficiencies).
+
+---
+
 ## 📝 Auto-Generated Manifest Right-Sizing Example
 
 To ensure GKE workloads are correctly sized without manual intervention, the pipeline automatically writes **updated, clean deployment manifests** for each analyzed workload. 
