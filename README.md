@@ -87,7 +87,7 @@ These ready-to-apply files are saved locally under the git-ignored `results/vpa-
 
 ### 1. Run the Pipeline Locally via the Antigravity TUI
 
-To run the entire end-to-end scraper, dashboard builder, and deployment pipeline, launch the modern Antigravity CLI/TUI (`agy`) inside your workspace root:
+To run the entire end-to-end scraper, dashboard builder, and deployment pipeline, launch the Antigravity CLI/TUI (`agy`) inside your workspace root:
 
 ```bash
 # Start the Antigravity interactive environment
