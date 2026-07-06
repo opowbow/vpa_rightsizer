@@ -2,6 +2,8 @@
 
 An intelligent single-agent orchestrator built with the **Google Agent Development Kit (ADK)**. It automates GKE cluster resource analysis, queries Vertical Pod Autoscaler (VPA) metrics, generates **newly optimized Kubernetes deployment manifests with updated CPU and memory requests**, compiles an interactive web dashboard, and deploys it directly to either Google Cloud Run or GKE.
 
+![Interactive Web Dashboard Screenshot](assets/dashboard.png)
+
 ---
 
 ## 🚀 Key Features
@@ -51,6 +53,8 @@ Below is an example of how a deployment manifest (e.g., `emailservice.yaml`) is 
 +            memory: 120Mi # Automatically updated to VPA target recommendation
 ```
 
+![Generated Resources Example](assets/resources.png)
+
 These ready-to-apply files are saved locally under the git-ignored `results/vpa-<project_id>/vpa-<cluster_name>/<namespace>/` directory and served interactively via the Web Dashboard.
 
 ---
@@ -61,6 +65,9 @@ These ready-to-apply files are saved locally under the git-ignored `results/vpa-
 ├── agent.py                      # Main single-agent orchestrator (vpa_rightsizer)
 ├── agents-cli-manifest.yaml      # ADK app manifest file
 ├── .gitignore                    # Excludes cache, environments, and dynamic outputs
+├── assets/                       # Image assets for documentation
+│   ├── dashboard.png             # Interactive Web Dashboard screenshot
+│   └── resources.png             # Right-sized deployment resources screenshot
 ├── tools/                        # Python execution tools used directly by the agent
 │   ├── scraper_tool.py           # Executes project-wide scans (calls scan_and_generate.py)
 │   ├── builder_tool.py           # Natively parses findings into public vpa-data.json
@@ -118,7 +125,7 @@ agents-cli scaffold enhance . --deployment-target agent_runtime
 
 #### Step B: Deploy to Vertex AI Agent Runtime
 ```bash
-agents-cli deploy --project YOUR_PROJECT_ID --region YOUR_REGION
+agents-cli deploy --project YOUR_PROJECT_ID --region europe-west1
 ```
 
 #### Step C: Publish on Gemini Enterprise
