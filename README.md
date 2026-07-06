@@ -49,8 +49,8 @@ Below is an example of how a deployment manifest (e.g., `emailservice.yaml`) is 
            requests:
 -            cpu: 100m
 -            memory: 64Mi
-+            cpu: 80m      # Automatically updated to VPA target recommendation
-+            memory: 120Mi # Automatically updated to VPA target recommendation
++            cpu: 30m      # Automatically updated to VPA target recommendation
++            memory: 500Mi # Automatically updated to VPA target recommendation
 ```
 
 ![Generated Resources Example](assets/resources.png)
