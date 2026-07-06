@@ -120,7 +120,7 @@ agents-cli scaffold enhance . --deployment-target agent_runtime
 
 #### Step B: Deploy to Vertex AI Agent Runtime
 ```bash
-agents-cli deploy --project YOUR_PROJECT_ID --region europe-west1
+agents-cli deploy --project YOUR_PROJECT_ID --region YOUR_REGION
 ```
 
 #### Step C: Publish on Gemini Enterprise
