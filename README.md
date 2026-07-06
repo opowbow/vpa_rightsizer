@@ -1,21 +1,22 @@
 # 📊 GKE VPA Rightsizer Agent
 
-An intelligent, multi-agent automated pipeline built with the **Google Agent Development Kit (ADK)**. It automates GKE cluster resource analysis, queries Vertical Pod Autoscaler (VPA) metrics, generates **newly optimized Kubernetes deployment manifests with updated CPU and memory requests**, compiles an interactive web dashboard, and deploys it to Google Cloud Run.
+An intelligent single-agent orchestrator built with the **Google Agent Development Kit (ADK)**. It automates GKE cluster resource analysis, queries Vertical Pod Autoscaler (VPA) metrics, generates **newly optimized Kubernetes deployment manifests with updated CPU and memory requests**, compiles an interactive web dashboard, and deploys it directly to either Google Cloud Run or GKE.
 
 ---
 
 ## 🚀 Key Features
 
-* **Multi-Agent Pipeline Orchestration**: Implements sequential checks and verification between dedicated subagents to prevent failures and handle automated workflows.
-* **Intelligent GKE Scraping (`gke_scraper`)**:
+* **Intelligent Single-Agent Orchestration**: Uses a sequential, single-agent tool pipeline to handle automated workflows cleanly without subagent complexity.
+* **Intelligent GKE Scraping (`run_project_vpa_scan`)**:
   * Scans multiple GKE clusters dynamically across Google Cloud project(s).
   * Extracts active Vertical Pod Autoscaler (VPA) targets, lower bounds, and upper bounds.
   * Dynamically queries **Cloud Monitoring fallback metrics** for workloads missing VPA definitions.
   * Prompts for missing Project IDs on the fly using the built-in `request_input` tool.
 * **Optimized Manifest Generation**: Automatically outputs **new deployment manifest files** with updated container `resources.requests.cpu` and `resources.requests.memory` values applied directly based on recommendations.
-* **Dataset & Asset Builder (`web_builder`)**: Parses raw scraper findings into structured JSON and copies updated, clean deployment manifests.
-* **Cloud Run Deployment (`cloud_run_deployer`)**: Deploys the Express-based interactive reporting dashboard to Google Cloud Run.
-
+* **Dataset & Asset Builder (`compile_web_dashboard`)**: Parses raw scraper findings into structured JSON and copies updated, clean deployment manifests.
+* **Flexible Deployment**: Supports interactive deployment selection:
+  * **Option A**: Deploy serverless on Google Cloud Run.
+  * **Option B**: Deploy directly onto a scanned GKE Cluster.
 
 ---
 
@@ -57,17 +58,14 @@ These ready-to-apply files are saved locally under the git-ignored `results/vpa-
 ## 📂 Project Structure
 
 ```
-├── agent.py                      # Main pipeline orchestrator (RootVpaPipeline)
+├── agent.py                      # Main single-agent orchestrator (vpa_rightsizer)
 ├── agents-cli-manifest.yaml      # ADK app manifest file
 ├── .gitignore                    # Excludes cache, environments, and dynamic outputs
-├── subagents/                    # Subagent definitions
-│   ├── scraper_agent.py          # gke_scraper (gke scraper subagent)
-│   ├── builder_agent.py          # web_builder (web builder subagent)
-│   └── deployer_agent.py         # cloud_run_deployer (cloud run deployer subagent)
-├── tools/                        # Python execution tools used by subagents
+├── tools/                        # Python execution tools used directly by the agent
 │   ├── scraper_tool.py           # Executes project-wide scans (calls scan_and_generate.py)
 │   ├── builder_tool.py           # Natively parses findings into public vpa-data.json
-│   └── deployer_tool.py          # Builds and deploys dashboard to Cloud Run
+│   ├── deployer_tool.py          # Builds and deploys dashboard to GKE or Cloud Run
+│   └── scan_and_generate.py      # Core logic for GKE metrics scanning
 └── results/                      # Git-ignored local output folder
     ├── vpa_recommendations_report.md
     └── vpa-<project_id>/
