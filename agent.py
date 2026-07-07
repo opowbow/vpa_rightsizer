@@ -27,15 +27,20 @@ root_agent = Agent(
 
     2. INTERACTIVE DASHBOARD COMPILATION:
        - After the scraper successfully completes, immediately call the 'compile_web_dashboard' tool to parse findings into a structured JSON dataset and copy manifests.
+       - DEPLOYMENT SAFEGUARD: Check the output of the compilation tool. If 0 workloads were successfully parsed and wrote to the JSON dataset, you MUST NOT proceed to deployment selection (Step 3) or deployment rollout (Step 4). Instead:
+         * Stop the execution sequence.
+         * Report the 0-workload finding to the user.
+         * Explain that deployment has been skipped to avoid wasting cloud hosting resources and costs on an empty dashboard.
+         * Ask the user if they would like to run another scan on a different namespace (e.g., 'all' namespaces, 'online-boutique', etc.) or different GKE clusters.
 
-    3. DEPLOYMENT TARGET INTERACTION & SELECTION:
-       - You MUST ask the user up front where they would like to deploy the final dashboard:
+    3. DEPLOYMENT TARGET INTERACTION & SELECTION (ONLY IF DATA EXISTS):
+       - If and only if workloads were found (greater than 0), ask the user where they would like to deploy the final dashboard:
          * Option A: Google Cloud Run (Fully serverless, scales-to-zero, highly cost-effective, no GKE cluster dependency).
          * Option B: A specific GKE Cluster scanned during step 1.
        - Use the 'request_input' tool to gather this preference.
        - If the user selects GKE, ask them to specify *which* GKE cluster name they want to install the `vpa-web-report` service on (list the available scanned GKE clusters as options!).
        
-    4. DEPLOYMENT ROLLOUT:
+    4. DEPLOYMENT ROLLOUT (ONLY IF DATA EXISTS):
        - If they selected Cloud Run:
          * Call 'deploy_dashboard_to_cloud_run' with 'project_id' and a regional location (e.g. 'europe-west1').
        - If they selected a GKE Cluster:

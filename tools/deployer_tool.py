@@ -77,7 +77,19 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
         # 4. Deploy to GKE using kubectl apply
         deploy_yaml = os.path.join(web_report_dir, "gke-deploy.yaml")
         print(f"Applying GKE Deployment manifest from {deploy_yaml}...")
+        if os.path.exists(deploy_yaml):
+            with open(deploy_yaml, "r", encoding="utf-8") as f:
+                yaml_content = f.read()
+            import re
+            yaml_content = re.sub(
+                r"image:\s*[^\s]+vpa-web-report:latest",
+                f"image: {image_tag}",
+                yaml_content
+            )
+            with open(deploy_yaml, "w", encoding="utf-8") as f:
+                f.write(yaml_content)
         subprocess.run(["kubectl", "apply", "-f", deploy_yaml], capture_output=True, text=True, check=True)
+
         
         # 5. Wait for rollout to complete
         print("Waiting for GKE Deployment rollout to finish...")
@@ -142,16 +154,29 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
             capture_output=True, text=True, check=True
         )
         
+        # Create Artifact Registry repository if it doesn't exist
+        print(f"Ensuring Artifact Registry repository 'vpa-repo' exists in region {region}...")
+        create_repo_cmd = [
+            "gcloud", "artifacts", "repositories", "create", "vpa-repo",
+            "--repository-format=docker",
+            "--location=" + region,
+            "--project=" + project_id,
+            "--quiet"
+        ]
+        # Run and ignore if already exists
+        subprocess.run(create_repo_cmd, capture_output=True, text=True)
+        
         # 2. Build via Cloud Build
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
-        image_tag = f"gcr.io/{project_id}/vpa-web-report:latest"
+        image_tag = f"{region}-docker.pkg.dev/{project_id}/vpa-repo/vpa-web-report:latest"
         
         print(f"Submitting container build to Cloud Build with tag {image_tag}...")
         subprocess.run([
             "gcloud", "builds", "submit", "--tag", image_tag,
             web_report_dir, "--project", project_id, "--quiet"
         ], capture_output=True, text=True, check=True)
+
         
         # 3. Deploy to Cloud Run
         print("Deploying container to Google Cloud Run...")
@@ -167,15 +192,29 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
         ]
         res = subprocess.run(deploy_cmd, capture_output=True, text=True)
         
-        # Extract Cloud Run URL from stdout
+        # Extract Cloud Run URL from stdout/stderr
         service_url = None
-        for line in res.stdout.split("\n"):
+        for line in (res.stdout + "\n" + res.stderr).split("\n"):
             if "Service URL:" in line or "https://" in line:
                 service_url = line.split(":")[-1].strip() if "Service URL:" in line else line.strip()
                 if "https://" in service_url:
                     service_url = "https://" + service_url.split("https://")[-1]
                 break
                 
+        if not service_url:
+            # Robust fallback: fetch directly from active Cloud Run service configuration
+            try:
+                desc_cmd = [
+                    "gcloud", "run", "services", "describe", "vpa-web-report",
+                    "--region", region, "--project", project_id,
+                    "--format", "value(status.url)", "--quiet"
+                ]
+                desc_res = subprocess.run(desc_cmd, capture_output=True, text=True)
+                if desc_res.returncode == 0 and desc_res.stdout.strip().startswith("https://"):
+                    service_url = desc_res.stdout.strip()
+            except Exception:
+                pass
+
         if not service_url:
             service_url = f"https://vpa-report-service-169047530199.europe-west1.run.app/" # Fallback
             
