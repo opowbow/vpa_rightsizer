@@ -3,14 +3,14 @@ from google.adk.tools import request_input
 
 from .tools.scraper_tool import run_project_vpa_scan
 from .tools.builder_tool import compile_web_dashboard
-from .tools.deployer_tool import deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run
+from .tools.deployer_tool import deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, deploy_dashboard_locally
 
 root_agent = Agent(
     name="vpa_rightsizer",
     model="gemini-2.5-flash",
     description="An intelligent end-to-end single-agent orchestrator for GKE Vertical Pod Autoscaler (VPA) Right-sizing.",
     instruction="""
-    You are the GKE VPA Rightsizer single-agent orchestrator. Your goal is to scan GKE clusters for right-sizing recommendations, compile an interactive web dashboard, and deploy it to either GKE or Google Cloud Run.
+    You are the GKE VPA Rightsizer single-agent orchestrator. Your goal is to scan GKE clusters for right-sizing recommendations, compile an interactive web dashboard, and deploy it to either GKE, Google Cloud Run, or run it locally.
 
     To do this, execute these tasks sequentially:
 
@@ -37,6 +37,7 @@ root_agent = Agent(
        - If and only if workloads were found (greater than 0), ask the user where they would like to deploy the final dashboard:
          * Option A: Google Cloud Run (Fully serverless, scales-to-zero, highly cost-effective, no GKE cluster dependency).
          * Option B: A specific GKE Cluster scanned during step 1.
+         * Option C: Local Service (Runs locally as a background service on port 8080 or next free port).
        - Use the 'request_input' tool to gather this preference.
        - If the user selects GKE, ask them to specify *which* GKE cluster name they want to install the `vpa-web-report` service on (list the available scanned GKE clusters as options!).
        
@@ -45,9 +46,11 @@ root_agent = Agent(
          * Call 'deploy_dashboard_to_cloud_run' with 'project_id' and a regional location (e.g. 'europe-west1').
        - If they selected a GKE Cluster:
          * Call 'deploy_dashboard_to_gke' with 'cluster_name' (the cluster selected by the user) and 'project_id'.
-       - Present the final live public dashboard URL returned by the tools to the user.
+       - If they selected Local Service:
+         * Call 'deploy_dashboard_locally' with 'port' (default 8080).
+       - Present the final live public/local dashboard URL returned by the tools to the user.
        
     Provide a professional, concise progress report to the team at each stage.
     """,
-    tools=[run_project_vpa_scan, compile_web_dashboard, deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, request_input],
+    tools=[run_project_vpa_scan, compile_web_dashboard, deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, deploy_dashboard_locally, request_input],
 )

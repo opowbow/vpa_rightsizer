@@ -228,3 +228,66 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
         return f"ERROR: Cloud Run deployment failed.\nStderr:\n{e.stderr}\nStdout:\n{e.stdout}"
     except Exception as ex:
         return f"ERROR: Unexpected exception deploying to Cloud Run: {ex}"
+
+def deploy_dashboard_locally(port: int = 8080) -> str:
+    """
+    Deploys/runs the static web application dashboard locally as a python background service.
+    If the requested port is in use, dynamically searches for the next available port.
+    """
+    import socket
+    
+    def is_port_in_use(p: int) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", p))
+                return False
+            except socket.error:
+                return True
+
+    try:
+        # 1. Resolve web report directory and server script
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        web_report_dir = os.path.join(repo_root, "vpa-web-report")
+        server_script = os.path.join(repo_root, "tools", "local_server.py")
+        
+        # 2. Find an available port starting at requested port
+        target_port = port
+        while is_port_in_use(target_port):
+            print(f"Port {target_port} is in use. Trying next port...")
+            target_port += 1
+            
+        print(f"Using available local port: {target_port}")
+        
+        # 3. Run python service in the background
+        log_file = os.path.join(web_report_dir, "local_server.log")
+        print(f"Starting local python server. Logs redirected to {log_file}...")
+        
+        out = open(log_file, "w")
+        process = subprocess.Popen(
+            ["python3", server_script, str(target_port), web_report_dir],
+            cwd=web_report_dir,
+            stdout=out,
+            stderr=out,
+            preexec_fn=os.setsid
+        )
+        
+        # Give the server a moment to start up and verify it doesn't crash immediately
+        time.sleep(2.0)
+        
+        if process.poll() is None:
+            # Still running!
+            dashboard_url = f"http://localhost:{target_port}"
+            return (
+                "SUCCESS: Web report successfully started as a local service!\n"
+                f"Local Dashboard URL: {dashboard_url}\n"
+                f"Process PID: {process.pid}\n"
+                f"Log file: {log_file}"
+            )
+        else:
+            out.close()
+            with open(log_file, "r") as f:
+                logs = f.read()
+            return f"ERROR: Local server failed to start or crashed immediately.\nServer Logs:\n{logs}"
+            
+    except Exception as ex:
+        return f"ERROR: Unexpected exception deploying dashboard locally: {ex}"
