@@ -56,5 +56,6 @@ Thumbs.db
 *.log
 results/
 vpa-online-boutique/
-vpa-gkeop002/
-vpa-web-report/
+vpa-web-report/public/vpa-data.json
+vpa-web-report/vpa-*
+

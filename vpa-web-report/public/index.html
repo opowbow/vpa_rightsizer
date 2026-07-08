@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 GKE VPA Rightsizer Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon">📊</div>
+                <h2>Rightsizer <span>Hub</span></h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" id="btn-dashboard">
+                    <span class="icon">📈</span> Dashboard
+                </a>
+                <a href="#" class="nav-item" id="btn-documentation">
+                    <span class="icon">📖</span> Documentation
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">Connected to GKE</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="welcome">
+                    <h1>Vertical Pod Autoscaler Insights</h1>
+                    <p>Analyze, right-size, and optimize GKE workload resources</p>
+                </div>
+                <div class="system-time">
+                    <span class="time-label">Current UTC</span>
+                    <span class="time-val" id="utc-time">--:--:--</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- Summary Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="metric-label">Total Clusters Scanned</span>
+                            <h3 class="metric-value" id="stat-clusters">0</h3>
+                        </div>
+                        <div class="metric-icon blue">☸️</div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="metric-label">Non-System Workloads</span>
+                            <h3 class="metric-value" id="stat-workloads">0</h3>
+                        </div>
+                        <div class="metric-icon purple">📦</div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="metric-label">VPA-Enabled Workloads</span>
+                            <h3 class="metric-value" id="stat-vpa-enabled">0</h3>
+                        </div>
+                        <div class="metric-icon green">⚡</div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="metric-label">Cloud Monitoring Fallbacks</span>
+                            <h3 class="metric-value" id="stat-fallbacks">0</h3>
+                        </div>
+                        <div class="metric-icon yellow">📊</div>
+                    </div>
+                </div>
+
+                <!-- Controls & Filtering -->
+                <div class="control-bar glass">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-workload" placeholder="Search workload name...">
+                    </div>
+                    <div class="filters">
+                        <select id="filter-cluster">
+                            <option value="">All Clusters</option>
+                        </select>
+                        <select id="filter-namespace">
+                            <option value="">All Namespaces</option>
+                        </select>
+                        <select id="filter-vpa">
+                            <option value="">All VPA States</option>
+                            <option value="Yes">VPA Enabled</option>
+                            <option value="No">No VPA (Fallback)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table/List -->
+                <div class="table-container glass">
+                    <table class="workload-table">
+                        <thead>
+                            <tr>
+                                <th>Cluster / Namespace</th>
+                                <th>Workload Name</th>
+                                <th>VPA Status</th>
+                                <th>Container</th>
+                                <th>Current Requests</th>
+                                <th>Recommended Target</th>
+                                <th>Optimization (CPU)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workloads-tbody">
+                            <tr>
+                                <td colspan="8" class="loading-cell">
+                                    <div class="spinner"></div>
+                                    <p>Loading GKE workload recommendations...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Documentation Tab -->
+            <section id="tab-documentation" class="tab-content">
+                <div class="doc-container glass">
+                    <h2>📚 Rightsizer Documentation</h2>
+                    <p>Vertical Pod Autoscaler (VPA) frees you from having to choose up-to-date resource requests and limits for your GKE containers. Correctly configuring CPU and Memory requests ensures high cluster utilization and protects applications from Out-Of-Memory (OOM) kills.</p>
+                    
+                    <h3>💡 How Recommendations are Determined</h3>
+                    <ul>
+                        <li><strong>VPA Enabled</strong>: Extracted directly from Kubernetes active VPA custom resource recommendations (targets, lower bounds, and upper bounds).</li>
+                        <li><strong>Cloud Monitoring Fallback</strong>: Dynamically queried or calculated using historical resource metrics of the container (95th percentile CPU usage, peak memory usage) where VPA is not configured.</li>
+                    </ul>
+
+                    <h3>⚙️ Applying Right-Sized Deployment Manifests</h3>
+                    <p>The GKE VPA Rightsizer Agent automatically generates safe, cleaned, and updated deployment manifest files. To apply any optimization:</p>
+                    <ol>
+                        <li>Click on the <strong>View Manifest</strong> action in the dashboard table.</li>
+                        <li>Review the newly proposed resource demands for your deployment.</li>
+                        <li>Download or copy the YAML content.</li>
+                        <li>Deploy to GKE via: <code>kubectl apply -f [manifest-name].yaml</code></li>
+                    </ol>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- YAML Modal -->
+    <div id="yaml-modal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge">YAML Manifest</span>
+                    <h3 id="modal-workload-title">Workload Name</h3>
+                </div>
+                <button class="close-btn" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <div class="meta-item"><strong>Cluster:</strong> <span id="modal-cluster">--</span></div>
+                    <div class="meta-item"><strong>Namespace:</strong> <span id="modal-namespace">--</span></div>
+                    <div class="meta-item"><strong>File Path:</strong> <span id="modal-path">--</span></div>
+                </div>
+                <div class="yaml-code-wrapper">
+                    <button class="copy-btn" id="btn-copy">📋 Copy Code</button>
+                    <pre><code id="yaml-content">Loading deployment yaml...</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Store
+        let dashboardData = {
+            summary: { totalWorkloads: 0, vpaEnabledCount: 0, clusterVpaStatus: {} },
+            workloads: []
+        };
+
+        // DOM Elements
+        const btnDashboard = document.getElementById('btn-dashboard');
+        const btnDocumentation = document.getElementById('btn-documentation');
+        const tabDashboard = document.getElementById('tab-dashboard');
+        const tabDocumentation = document.getElementById('tab-documentation');
+        const searchInput = document.getElementById('search-workload');
+        const filterCluster = document.getElementById('filter-cluster');
+        const filterNamespace = document.getElementById('filter-namespace');
+        const filterVpa = document.getElementById('filter-vpa');
+        const workloadsTbody = document.getElementById('workloads-tbody');
+        
+        // Modal elements
+        const yamlModal = document.getElementById('yaml-modal');
+        const modalClose = document.getElementById('modal-close');
+        const modalWorkloadTitle = document.getElementById('modal-workload-title');
+        const modalCluster = document.getElementById('modal-cluster');
+        const modalNamespace = document.getElementById('modal-namespace');
+        const modalPath = document.getElementById('modal-path');
+        const yamlContent = document.getElementById('yaml-content');
+        const btnCopy = document.getElementById('btn-copy');
+
+        // Navigation
+        btnDashboard.addEventListener('click', (e) => {
+            e.preventDefault();
+            btnDashboard.classList.add('active');
+            btnDocumentation.classList.remove('active');
+            tabDashboard.classList.add('active');
+            tabDocumentation.classList.remove('active');
+        });
+
+        btnDocumentation.addEventListener('click', (e) => {
+            e.preventDefault();
+            btnDocumentation.classList.add('active');
+            btnDashboard.classList.remove('active');
+            tabDocumentation.classList.add('active');
+            tabDashboard.classList.remove('active');
+        });
+
+        // UTC clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('utc-time').innerText = now.toISOString().slice(11, 19) + ' UTC';
+        }, 1000);
+
+        // Fetch & Load Data
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/vpa-data.json');
+                if (!response.ok) throw new Error('Data not found');
+                dashboardData = await response.json();
+                
+                populateSummary();
+                populateFilters();
+                renderTable();
+            } catch (err) {
+                console.error(err);
+                workloadsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="error-cell">
+                            <span class="error-icon">⚠️</span>
+                            <h4>No Workloads Found</h4>
+                            <p>Run a GKE VPA Scan first using the Rightsizer single-agent orchestrator to generate data.</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function populateSummary() {
+            const summary = dashboardData.summary;
+            const uniqueClusters = new Set(dashboardData.workloads.map(w => w.cluster));
+            
+            document.getElementById('stat-clusters').innerText = uniqueClusters.size;
+            document.getElementById('stat-workloads').innerText = dashboardData.workloads.length;
+            document.getElementById('stat-vpa-enabled').innerText = summary.vpaEnabledCount;
+            document.getElementById('stat-fallbacks').innerText = dashboardData.workloads.length - summary.vpaEnabledCount;
+        }
+
+        function populateFilters() {
+            const clusters = [...new Set(dashboardData.workloads.map(w => w.cluster))];
+            const namespaces = [...new Set(dashboardData.workloads.map(w => w.namespace))];
+
+            clusters.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.innerText = c;
+                filterCluster.appendChild(opt);
+            });
+
+            namespaces.forEach(ns => {
+                const opt = document.createElement('option');
+                opt.value = ns;
+                opt.innerText = ns;
+                filterNamespace.appendChild(opt);
+            });
+        }
+
+        // Helper to convert K8s CPU and Memory resources to relative values for comparison
+        function parseCpu(cpuStr) {
+            if (!cpuStr) return 0;
+            if (cpuStr.endsWith('m')) return parseFloat(cpuStr);
+            return parseFloat(cpuStr) * 1000;
+        }
+
+        function parseMem(memStr) {
+            if (!memStr) return 0;
+            if (memStr.endsWith('Mi')) return parseFloat(memStr);
+            if (memStr.endsWith('Gi')) return parseFloat(memStr) * 1024;
+            if (memStr.endsWith('Ki')) return parseFloat(memStr) / 1024;
+            return parseFloat(memStr) / (1024 * 1024); // assumption bytes
+        }
+
+        function renderTable() {
+            const search = searchInput.value.toLowerCase();
+            const cluster = filterCluster.value;
+            const namespace = filterNamespace.value;
+            const vpa = filterVpa.value;
+
+            const filtered = dashboardData.workloads.filter(w => {
+                const matchSearch = w.workloadName.toLowerCase().includes(search);
+                const matchCluster = !cluster || w.cluster === cluster;
+                const matchNamespace = !namespace || w.namespace === namespace;
+                const matchVpa = !vpa || (vpa === 'Yes' ? w.vpaStatus.startsWith('Yes') : !w.vpaStatus.startsWith('Yes'));
+                return matchSearch && matchCluster && matchNamespace && matchVpa;
+            });
+
+            if (filtered.length === 0) {
+                workloadsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-data-cell">No matching workloads found</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            workloadsTbody.innerHTML = '';
+            filtered.forEach((w, idx) => {
+                const tr = document.createElement('tr');
+                
+                // Calculate optimization delta
+                const currC = parseCpu(w.current.cpu);
+                const recC = parseCpu(w.recommended.cpu);
+                let optHtml = '';
+                if (currC > 0 && recC > 0) {
+                    const pct = Math.round(((currC - recC) / currC) * 100);
+                    if (pct > 0) {
+                        optHtml = `<span class="opt-savings green-text">📉 Reduce ${pct}%</span>`;
+                    } else if (pct < 0) {
+                        optHtml = `<span class="opt-savings red-text">📈 Increase ${Math.abs(pct)}%</span>`;
+                    } else {
+                        optHtml = `<span class="opt-savings gray-text">Sized Correctly</span>`;
+                    }
+                } else {
+                    optHtml = `<span class="opt-savings gray-text">--</span>`;
+                }
+
+                // VPA Status Badging
+                let badgeClass = 'fallback';
+                if (w.vpaStatus.includes('Auto') || w.vpaStatus.includes('Initial')) badgeClass = 'active';
+                else if (w.vpaStatus.includes('Off')) badgeClass = 'warn';
+
+                tr.innerHTML = `
+                    <td>
+                        <div class="cluster-cell">
+                            <strong>${w.cluster}</strong>
+                            <span>ns: ${w.namespace}</span>
+                        </div>
+                    </td>
+                    <td><span class="workload-name">${w.workloadName}</span></td>
+                    <td><span class="status-badge ${badgeClass}">${w.vpaStatus}</span></td>
+                    <td><code>${w.containerName}</code></td>
+                    <td>
+                        <div class="resource-cell">
+                            <span>CPU: <code>${w.current.cpu}</code></span>
+                            <span>Mem: <code>${w.current.memory}</code></span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="resource-cell recommended">
+                            <span>CPU: <strong>${w.recommended.cpu}</strong></span>
+                            <span>Mem: <strong>${w.recommended.memory}</strong></span>
+                        </div>
+                    </td>
+                    <td>${optHtml}</td>
+                    <td>
+                        <button class="action-btn glass" onclick="showYaml('${w.cluster}', '${w.namespace}', '${w.workloadName}', '${w.manifestPath}', '${w.manifestName}')">
+                            📄 View Manifest
+                        </button>
+                    </td>
+                `;
+                workloadsTbody.appendChild(tr);
+            });
+        }
+
+        // Live filtration
+        searchInput.addEventListener('input', renderTable);
+        filterCluster.addEventListener('change', renderTable);
+        filterNamespace.addEventListener('change', renderTable);
+        filterVpa.addEventListener('change', renderTable);
+
+        // Modal Functionality
+        async function showYaml(cluster, namespace, name, fullPath, manifestName) {
+            modalWorkloadTitle.innerText = name;
+            modalCluster.innerText = cluster;
+            modalNamespace.innerText = namespace;
+            modalPath.innerText = manifestName;
+            yamlContent.innerText = "Fetching right-sized deployment manifest...";
+            yamlModal.classList.add('show');
+
+            try {
+                // Determine the serving file path
+                // manifestPath is something like: file:///home/admin_/vpa_rightsizer/results/vpa-op-test-001/vpa-cluster-a/default/emailservice.yaml
+                // We serve manifests via the express routing statically relative to /vpa-<project>/vpa-<cluster>/<namespace>/<file>
+                let relativePath = '';
+                const parts = fullPath.split('/results/');
+                if (parts.length > 1) {
+                    relativePath = '/' + parts[1].split('#')[0];
+                } else {
+                    // fallbacks
+                    relativePath = `/vpa-${cluster}/${namespace}/${name}.yaml`;
+                }
+
+                const res = await fetch(relativePath);
+                if (!res.ok) throw new Error('File not found on web server');
+                const yamlText = await res.text();
+                yamlContent.innerText = yamlText;
+            } catch (err) {
+                console.error(err);
+                yamlContent.innerText = `Error: Could not fetch manifest from server.\nPath attempted: ${fullPath}\n\nPlease check container logs.`;
+            }
+        }
+
+        modalClose.addEventListener('click', () => {
+            yamlModal.classList.remove('show');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === yamlModal) yamlModal.classList.remove('show');
+        });
+
+        btnCopy.addEventListener('click', () => {
+            navigator.clipboard.writeText(yamlContent.innerText);
+            btnCopy.innerText = "✅ Copied!";
+            setTimeout(() => { btnCopy.innerText = "📋 Copy Code"; }, 2000);
+        });
+
+        // Init
+        loadDashboardData();
+    </script>
+</body>
+</html>
