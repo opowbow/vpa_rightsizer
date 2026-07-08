@@ -578,11 +578,16 @@
 
         function renderCardGrid(workloads) {
             workloadsGrid.innerHTML = '';
-            workloads.forEach(w => {
-                const reductionPct = Math.round(calculateReduction(w) * 100);
-                
-                // Color boundaries for borders: Red if optimization delta > 30% (severely sized wrong), Orange otherwise.
-                const topBorderColor = reductionPct > 30 ? 'border-red' : 'border-orange';
+                // Border color reflects VPA status:
+                // - Red if VPA is on and present (starts with Yes)
+                // - Orange if VPA is supported in the cluster but no instance is configured for the workload (No but API Available)
+                // - Blue if no VPA is present and relying on metrics
+                let topBorderColor = 'border-blue';
+                if (w.vpaStatus.startsWith('Yes')) {
+                    topBorderColor = 'border-red';
+                } else if (w.vpaStatus.includes('Available') || w.vpaStatus.includes('API')) {
+                    topBorderColor = 'border-orange';
+                }
                 
                 let badgeClass = 'status-badge-yes';
                 if (w.vpaStatus.includes('Off') || w.vpaStatus.includes('Fallback')) {
