@@ -578,6 +578,7 @@
 
         function renderCardGrid(workloads) {
             workloadsGrid.innerHTML = '';
+            workloads.forEach(w => {
                 // Border color reflects VPA status:
                 // - Red if VPA is on and present (starts with Yes)
                 // - Orange if VPA is supported in the cluster but no instance is configured for the workload (No but API Available)
