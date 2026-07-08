@@ -35,19 +35,19 @@ root_agent = Agent(
 
     3. DEPLOYMENT TARGET INTERACTION & SELECTION (ONLY IF DATA EXISTS):
        - If and only if workloads were found (greater than 0), ask the user where they would like to deploy the final dashboard:
-         * Option A: Google Cloud Run (Fully serverless, scales-to-zero, highly cost-effective, no GKE cluster dependency).
-         * Option B: A specific GKE Cluster scanned during step 1.
-         * Option C: Local Service (Runs locally as a background service on port 8080 or next free port).
-       - Use the 'request_input' tool to gather this preference.
+         * Option A: Local Service (Runs locally as a background service on port 8080 or next free port) - This is the DEFAULT option.
+         * Option B: Google Cloud Run (Fully serverless, scales-to-zero, highly cost-effective, no GKE cluster dependency).
+         * Option C: A specific GKE Cluster scanned during step 1.
+       - Use the 'request_input' tool to gather this preference. If the user doesn't specify or wants the default, proceed with Local Service (Option A).
        - If the user selects GKE, ask them to specify *which* GKE cluster name they want to install the `vpa-web-report` service on (list the available scanned GKE clusters as options!).
        
     4. DEPLOYMENT ROLLOUT (ONLY IF DATA EXISTS):
+       - If they selected Local Service:
+         * Call 'deploy_dashboard_locally' with 'port' (default 8080).
        - If they selected Cloud Run:
          * Call 'deploy_dashboard_to_cloud_run' with 'project_id' and a regional location (e.g. 'europe-west1').
        - If they selected a GKE Cluster:
-         * Call 'deploy_dashboard_to_gke' with 'cluster_name' (the cluster selected by the user) and 'project_id'.
-       - If they selected Local Service:
-         * Call 'deploy_dashboard_locally' with 'port' (default 8080).
+         * Call 'deploy_dashboard_to_gke' with 'cluster_name' (the cluster selected by the user) and 'project_id').
        - Present the final live public/local dashboard URL returned by the tools to the user.
        
     Provide a professional, concise progress report to the team at each stage.
