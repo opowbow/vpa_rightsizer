@@ -26,39 +26,86 @@ Before you begin, ensure you have:
 - **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
 
 
-## Quick Start
+## Quick Start & Local Running
 
-Install `agents-cli` and its skills if not already installed:
+You can set up and run this agent locally in two ways depending on your preferred interface:
 
+### ⚙️ Initial Setup
+Install `agents-cli` and setup skills:
 ```bash
 uvx google-agents-cli setup
-```
-
-Install required packages:
-
-```bash
 agents-cli install
 ```
 
-Test the agent with a local web server:
+---
 
-```bash
-agents-cli playground
-```
+### 💻 Option A: Antigravity CLI (`agy`) - Terminal TUI
+The **Antigravity CLI** (`agy`) is the recommended lightweight, terminal-based conversational interface for fast, interactive testing:
+1. Start the CLI:
+   ```bash
+   agy
+   ```
+2. Interact, trigger agent tools, and test agent loops directly in your shell.
 
-You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`.
+---
+
+### 🧪 Option B: Playground (`agents-cli playground`)
+The **Agent CLI Playground** is a local web server with hot-reloading capabilities:
+1. Start the playground:
+   ```bash
+   agents-cli playground
+   ```
+2. Open the web interface in your browser to interact with the agent. You can also inspect agent traces and steps on the fly.
+
+You can also run native ADK commands using: `uv run adk`.
+
+---
+
+## 🌐 Agent Platform Publishing
+
+Once tested locally, the agent is fully configured to be deployed and published directly to the enterprise **Agent Platform**.
+
+### 🚀 Deployment Command
+1. Configure your target Google Cloud project ID:
+   ```bash
+   gcloud config set project <your-project-id>
+   ```
+2. Deploy the agent to the platform's Agent Runtime:
+   ```bash
+   agents-cli deploy
+   ```
+3. Publish and register the agent to Gemini Enterprise:
+   ```bash
+   agents-cli publish gemini-enterprise
+   ```
+
+---
+
+### 📂 Platform-Specific Files
+The following files in the repository are explicitly used by and configured for the **Agent Platform** publishing process:
+
+*   📄 **`agents-cli-manifest.yaml`**: The primary deployment manifest file used by the platform to identify the agent configuration, target region, base ADK template, runtime parameters, and workspace source directory.
+*   📄 **`AGENTS.md` / `GEMINI.md`**: Behavioral guidance guidelines used by platform agents and evaluation engines to align coding practices, orchestrator loop definitions, and operational safety boundaries.
+*   🐳 **`Dockerfile`**: Provides the recipe for building a container image in the platform's cloud server to run the Python ADK backend.
+*   📦 **`pyproject.toml`**: Declares package dependencies, optional dependency groups (such as `eval` and `lint`), and Hatchling build targets required by the platform to correctly install and package the agent's modules during deployment.
+
+---
 
 ## Commands
 
 | Command              | Description                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------- |
+| `agy`                | Launch the Antigravity TUI local development interface                                        |
 | `agents-cli install` | Install dependencies using uv                                                         |
-| `agents-cli playground` | Launch local development environment                                                  |
+| `agents-cli playground` | Launch local playground development environment web server                            |
 | `agents-cli lint`    | Run code quality checks                                                               |
 | `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more — see `agents-cli eval --help`) |
 | `uv run pytest tests/unit tests/integration` | Run unit and integration tests                                                        |
-| `agents-cli deploy`  | Deploy agent to Agent Runtime                                                                |
-| `agents-cli publish gemini-enterprise` | Register deployed agent to Gemini Enterprise                    || [A2A Inspector](https://github.com/a2aproject/a2a-inspector) | Launch A2A Protocol Inspector                                                        |
+| `agents-cli deploy`  | Deploy agent to the Agent Runtime platform                                                   |
+| `agents-cli publish gemini-enterprise` | Register deployed agent to Gemini Enterprise                                                |
+| [A2A Inspector](https://github.com/a2aproject/a2a-inspector) | Launch A2A Protocol Inspector to test interoperability                                |
+
+---
 
 ## 🛠️ Project Management
 
@@ -72,21 +119,15 @@ You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`
 
 ## Development
 
-Edit your agent logic in `vpa_rightsizer/agent.py` and test with `agents-cli playground` - it auto-reloads on save.
+Edit your agent logic in `vpa_rightsizer/agent.py` and test with `agy` or `agents-cli playground` - it auto-reloads on save.
 
-## Deployment
-
-```bash
-gcloud config set project <your-project-id>
-agents-cli deploy
-```
-
-To add CI/CD and Terraform, run `agents-cli scaffold enhance`.
-To set up your production infrastructure, run `agents-cli infra cicd`.
+---
 
 ## Observability
 
 Built-in telemetry exports to Cloud Trace, BigQuery, and Cloud Logging.
+
+---
 
 ## A2A Inspector
 
