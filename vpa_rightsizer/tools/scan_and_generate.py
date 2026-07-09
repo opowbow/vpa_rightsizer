@@ -1,9 +1,10 @@
-import os
-import sys
-import json
 import argparse
+import json
+import os
 import subprocess
-from datetime import datetime, timezone
+import sys
+from datetime import UTC, datetime
+
 
 def run_cmd(cmd):
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -97,7 +98,7 @@ def main():
         cluster_name = cluster_info["name"]
         location = cluster_info["location"]
         print(f"\n--- Scanning Cluster: {cluster_name} ({location}) ---")
-        
+
         # Switch context to cluster
         try:
             print(f"Getting credentials for {cluster_name}...")
@@ -116,13 +117,13 @@ def main():
             namespace_arg = ["--all-namespaces"] if is_all_namespaces else ["-n", args.namespace]
             deps_json = run_cmd(["kubectl", "get", "deployments", "-o", "json"] + namespace_arg)
             deployments = json.loads(deps_json).get("items", [])
-            
+
             # Exclude GKE system namespaces by default unless --include-system is passed.
             # Only apply default exclusion when performing a multi-namespace/all-namespace scan.
             if not getattr(args, "include_system", False) and (is_all_namespaces or not args.namespace):
                 system_prefixes = ("kube-", "gke-", "gmp-")
                 deployments = [
-                    d for d in deployments 
+                    d for d in deployments
                     if not d["metadata"].get("namespace", "default").startswith(system_prefixes)
                 ]
         except Exception as e:
@@ -157,7 +158,7 @@ def main():
         for dep in deployments:
             name = dep["metadata"]["name"]
             namespace = dep["metadata"].get("namespace", "default")
-            
+
             # Strip metadata for clean manifest
             clean_dep = {
                 "apiVersion": dep.get("apiVersion", "apps/v1"),
@@ -169,37 +170,37 @@ def main():
                 },
                 "spec": dep["spec"]
             }
-            
+
             if "template" in clean_dep["spec"] and "metadata" in clean_dep["spec"]["template"]:
                 clean_dep["spec"]["template"]["metadata"].pop("creationTimestamp", None)
-                
+
             containers = dep["spec"]["template"]["spec"].get("containers", [])
             vpa = vpas_dict.get(name)
-            
+
             vpa_mode = "Off"
             vpa_enabled = "No (Cloud Monitoring Fallback)" if not has_vpa_api else "No (VPA API Available)"
             if vpa:
                 vpa_mode = vpa.get("spec", {}).get("updatePolicy", {}).get("updateMode", "Off")
                 vpa_enabled = f"Yes ({vpa_mode})"
-                
+
             for c in containers:
                 c_name = c["name"]
                 resources = c.get("resources", {})
                 requests = resources.get("requests", {})
-                
+
                 curr_cpu = requests.get("cpu", "100m")
                 curr_mem = requests.get("memory", "64Mi")
-                
+
                 # Extract recommendations or calculate fallback
                 rec_cpu = curr_cpu
                 rec_mem = curr_mem
                 rec_provided = False
-                
+
                 vpa_lower_cpu = curr_cpu
                 vpa_lower_mem = curr_mem
                 vpa_upper_cpu = curr_cpu
                 vpa_upper_mem = curr_mem
-                
+
                 if vpa:
                     rec_container = None
                     container_recs = vpa.get("status", {}).get("recommendation", {}).get("containerRecommendations", [])
@@ -215,7 +216,7 @@ def main():
                         vpa_upper_cpu = rec_container.get("upperBound", {}).get("cpu", rec_cpu)
                         vpa_upper_mem = rec_container.get("upperBound", {}).get("memory", rec_mem)
                         rec_provided = True
-                        
+
                 if not rec_provided:
                     # Generate fallback
                     try:
@@ -227,7 +228,7 @@ def main():
                             rec_cpu = f"{val * 0.8:.2f}"
                     except:
                         rec_cpu = "80m"
-                        
+
                     try:
                         if curr_mem.endswith("Mi"):
                             val = int(curr_mem[:-2])
@@ -237,7 +238,7 @@ def main():
                             rec_mem = f"{max(0.1, val * 0.95):.2f}Gi"
                     except:
                         rec_mem = "64Mi"
-                        
+
                     vpa_lower_cpu = rec_cpu
                     vpa_lower_mem = rec_mem
                     vpa_upper_cpu = rec_cpu
@@ -252,13 +253,13 @@ def main():
                             clean_c["resources"]["requests"] = {}
                         clean_c["resources"]["requests"]["cpu"] = rec_cpu
                         clean_c["resources"]["requests"]["memory"] = rec_mem
-                        
+
                 # Save manifest
                 manifest_file = os.path.join(manifest_target_dir, f"{name}.yaml")
                 with open(manifest_file, "w", encoding="utf-8") as mf:
                     import yaml
                     yaml.dump(clean_dep, mf, default_flow_style=False)
-                    
+
                 all_workloads.append({
                     "cluster": cluster_name,
                     "namespace": namespace,
@@ -275,35 +276,35 @@ def main():
     # Generate recommendations report
     report_file = os.path.join(results_dir, "vpa_recommendations_report.md")
     with open(report_file, "w", encoding="utf-8") as rf:
-        rf.write(f"# 📊 GKE Workloads & Vertical Pod Autoscaler (VPA) Recommendations Report\n\n")
-        rf.write(f"**Generated On**: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n")
-        rf.write(f"## 📈 Executive Summary\n")
+        rf.write("# 📊 GKE Workloads & Vertical Pod Autoscaler (VPA) Recommendations Report\n\n")
+        rf.write(f"**Generated On**: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n")
+        rf.write("## 📈 Executive Summary\n")
         rf.write(f"- **Total Clusters Scanned**: {len(target_clusters)}\n")
         rf.write(f"- **Total Non-System Workloads Found**: {len(all_workloads)}\n")
-        
+
         vpa_enabled_count = len([w for w in all_workloads if "Yes" in w["vpaStatus"]])
         rf.write(f"- **Workloads with VPA Enabled**: {vpa_enabled_count}\n")
         rf.write(f"- **Cloud Monitoring Fallbacks**: {len(all_workloads) - vpa_enabled_count}\n\n")
-        
-        rf.write(f"### VPA Support by Cluster**:\n")
+
+        rf.write("### VPA Support by Cluster**:\n")
         for cName, support in cluster_vpa_support.items():
             rf.write(f"- `{cName}`: **{support}**\n")
         rf.write("\n")
-        
-        rf.write(f"### 🔍 Cluster-Specific Findings\n")
+
+        rf.write("### 🔍 Cluster-Specific Findings\n")
         for cluster_info in target_clusters:
             cName = cluster_info["name"]
             c_workloads = [w for w in all_workloads if w["cluster"] == cName]
             rf.write(f"- Cluster `{cName}` contains {len(c_workloads)} workloads scanned.\n")
         rf.write("\n")
-        
-        rf.write(f"## 📋 Detailed Workload Recommendation Table\n")
-        rf.write(f"| Cluster Name | Namespace | Workload Name | VPA Status & Mode | Container Name | Current Requests | Recommended Targets | Lower Bounds | Upper Bounds | Manifest Path |\n")
-        rf.write(f"|---|---|---|---|---|---|---|---|---|---|\n")
+
+        rf.write("## 📋 Detailed Workload Recommendation Table\n")
+        rf.write("| Cluster Name | Namespace | Workload Name | VPA Status & Mode | Container Name | Current Requests | Recommended Targets | Lower Bounds | Upper Bounds | Manifest Path |\n")
+        rf.write("|---|---|---|---|---|---|---|---|---|---|\n")
         for w in all_workloads:
             rf.write(f"| {w['cluster']} | {w['namespace']} | {w['workloadName']} | {w['vpaStatus']} | {w['containerName']} | {w['current']} | {w['recommended']} | {w['lowerBound']} | {w['upperBound']} | {w['manifestPath']} |\n")
-            
-    print(f"SUCCESS: Generated report and right-sized manifests.")
+
+    print("SUCCESS: Generated report and right-sized manifests.")
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,8 @@
+import json
 import os
 import subprocess
 import time
-import json
+
 
 def get_cluster_location(cluster_name: str, project_id: str) -> str:
     """Helper to retrieve location of a cluster dynamically."""
@@ -28,23 +29,23 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
                 project_id = subprocess.run(["gcloud", "config", "get-value", "project"], capture_output=True, text=True, check=True).stdout.strip()
             except Exception:
                 project_id = "op-hack-001"
-                
+
         location = get_cluster_location(cluster_name, project_id)
         print(f"Starting GKE Deployer for cluster: {cluster_name} ({location}) under project: {project_id}...")
-        
+
         # Switch context to target GKE cluster first
         subprocess.run([
             "gcloud", "container", "clusters", "get-credentials", cluster_name,
             "--location", location, "--project", project_id, "--quiet"
         ], capture_output=True, text=True, check=True)
-        
+
         # 1. Enable Cloud Build & Artifact Registry services if not already active
         print("Enabling Cloud Build & Artifact Registry APIs...")
         subprocess.run(
             ["gcloud", "services", "enable", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "--project", project_id, "--quiet"],
             capture_output=True, text=True, check=True
         )
-        
+
         # 2. Create Artifact Registry docker repository if missing
         print("Ensuring Artifact Registry repository 'gke-repo' exists...")
         loc_parts = location.split("-")
@@ -57,7 +58,7 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
             "--quiet"
         ]
         subprocess.run(create_repo_cmd, capture_output=True, text=True)
-        
+
         # 3. Build and Push image using Cloud Build (robust path resolution)
         repo_root = os.path.abspath(__file__)
         while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
@@ -68,7 +69,7 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
             repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
         image_tag = f"{region_sub}-docker.pkg.dev/{project_id}/gke-repo/vpa-web-report:latest"
-        
+
         print(f"Submitting container build to Cloud Build with tag {image_tag}...")
         build_cmd = [
             "gcloud", "builds", "submit",
@@ -79,12 +80,12 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
         ]
         subprocess.run(build_cmd, capture_output=True, text=True, check=True)
         print("Cloud Build succeeded.")
-        
+
         # 4. Deploy to GKE using kubectl apply
         deploy_yaml = os.path.join(web_report_dir, "gke-deploy.yaml")
         print(f"Applying GKE Deployment manifest from {deploy_yaml}...")
         if os.path.exists(deploy_yaml):
-            with open(deploy_yaml, "r", encoding="utf-8") as f:
+            with open(deploy_yaml, encoding="utf-8") as f:
                 yaml_content = f.read()
             import re
             yaml_content = re.sub(
@@ -96,7 +97,7 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
                 f.write(yaml_content)
         subprocess.run(["kubectl", "apply", "-f", deploy_yaml], capture_output=True, text=True, check=True)
 
-        
+
         # 5. Wait for rollout to complete
         print("Waiting for GKE Deployment rollout to finish...")
         subprocess.run(
@@ -104,7 +105,7 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
             capture_output=True, text=True, check=True
         )
         print("Deployment rollout complete.")
-        
+
         # 6. Retrieve External LoadBalancer IP
         print("Polling GKE for external LoadBalancer IP...")
         external_ip = None
@@ -115,21 +116,21 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
             if ip:
                 external_ip = ip
                 break
-                
+
             host_cmd = ["kubectl", "get", "service", "vpa-web-report-service", "-n", "default", "-o", "jsonpath={.status.loadBalancer.ingress[0].hostname}"]
             res_host = subprocess.run(host_cmd, capture_output=True, text=True)
             host = res_host.stdout.strip()
             if host:
                 external_ip = host
                 break
-                
+
             time.sleep(10)
-            
+
         if not external_ip:
             external_ip = "<pending_external_ip_check_kubectl_later>"
-            
+
         dashboard_url = f"http://{external_ip}:80" if external_ip != "<pending_external_ip_check_kubectl_later>" else "Pending (Service created; run 'kubectl get svc vpa-web-report-service' to view IP)"
-        
+
         return (
             "SUCCESS: Web report successfully deployed to GKE Cluster!\n"
             f"Public Dashboard URL: {dashboard_url}\n"
@@ -153,13 +154,13 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
                 project_id = "op-hack-001"
 
         print(f"Starting Cloud Run Deployer for project: {project_id}, region: {region}...")
-        
+
         # 1. Enable Services
         subprocess.run(
             ["gcloud", "services", "enable", "cloudbuild.googleapis.com", "run.googleapis.com", "artifactregistry.googleapis.com", "--project", project_id, "--quiet"],
             capture_output=True, text=True, check=True
         )
-        
+
         # Create Artifact Registry repository if it doesn't exist
         print(f"Ensuring Artifact Registry repository 'vpa-repo' exists in region {region}...")
         create_repo_cmd = [
@@ -171,7 +172,7 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
         ]
         # Run and ignore if already exists
         subprocess.run(create_repo_cmd, capture_output=True, text=True)
-        
+
         # 2. Build via Cloud Build (robust path resolution)
         repo_root = os.path.abspath(__file__)
         while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
@@ -182,14 +183,14 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
             repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
         image_tag = f"{region}-docker.pkg.dev/{project_id}/vpa-repo/vpa-web-report:latest"
-        
+
         print(f"Submitting container build to Cloud Build with tag {image_tag}...")
         subprocess.run([
             "gcloud", "builds", "submit", "--tag", image_tag,
             web_report_dir, "--project", project_id, "--quiet"
         ], capture_output=True, text=True, check=True)
 
-        
+
         # 3. Deploy to Cloud Run
         print("Deploying container to Google Cloud Run...")
         deploy_cmd = [
@@ -203,7 +204,7 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
             "--quiet"
         ]
         res = subprocess.run(deploy_cmd, capture_output=True, text=True)
-        
+
         # Extract Cloud Run URL from stdout/stderr
         service_url = None
         for line in (res.stdout + "\n" + res.stderr).split("\n"):
@@ -212,7 +213,7 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
                 if "https://" in service_url:
                     service_url = "https://" + service_url.split("https://")[-1]
                 break
-                
+
         if not service_url:
             # Robust fallback: fetch directly from active Cloud Run service configuration
             try:
@@ -228,8 +229,8 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
                 pass
 
         if not service_url:
-            service_url = f"https://vpa-report-service-169047530199.europe-west1.run.app/" # Fallback
-            
+            service_url = "https://vpa-report-service-169047530199.europe-west1.run.app/" # Fallback
+
         return (
             "SUCCESS: Web report successfully deployed to Google Cloud Run!\n"
             f"Public Service URL: {service_url}\n"
@@ -247,17 +248,16 @@ def deploy_dashboard_locally(port: int = 8080) -> str:
     If the requested port is in use, dynamically searches for the next available port.
     """
     import socket
-    
+
     def is_port_in_use(p: int) -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
                 s.bind(("127.0.0.1", p))
                 return False
-            except socket.error:
+            except OSError:
                 return True
 
     try:
-        # 1. Resolve web report directory and server script (robust path resolution)
         repo_root = os.path.abspath(__file__)
         while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
             parent = os.path.dirname(repo_root)
@@ -266,20 +266,24 @@ def deploy_dashboard_locally(port: int = 8080) -> str:
                 break
             repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
-        server_script = os.path.join(repo_root, "tools", "local_server.py")
-        
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        server_script = os.path.join(current_dir, "local_server.py")
+        if not os.path.exists(server_script):
+            server_script = os.path.join(repo_root, "tools", "local_server.py")
+
         # 2. Find an available port starting at requested port
         target_port = port
         while is_port_in_use(target_port):
             print(f"Port {target_port} is in use. Trying next port...")
             target_port += 1
-            
+
         print(f"Using available local port: {target_port}")
-        
+
         # 3. Run python service in the background
         log_file = os.path.join(web_report_dir, "local_server.log")
         print(f"Starting local python server. Logs redirected to {log_file}...")
-        
+
         out = open(log_file, "w")
         process = subprocess.Popen(
             ["python3", server_script, str(target_port), web_report_dir],
@@ -288,10 +292,10 @@ def deploy_dashboard_locally(port: int = 8080) -> str:
             stderr=out,
             preexec_fn=os.setsid
         )
-        
+
         # Give the server a moment to start up and verify it doesn't crash immediately
         time.sleep(2.0)
-        
+
         if process.poll() is None:
             # Still running!
             dashboard_url = f"http://localhost:{target_port}"
@@ -303,9 +307,9 @@ def deploy_dashboard_locally(port: int = 8080) -> str:
             )
         else:
             out.close()
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 logs = f.read()
             return f"ERROR: Local server failed to start or crashed immediately.\nServer Logs:\n{logs}"
-            
+
     except Exception as ex:
         return f"ERROR: Unexpected exception deploying dashboard locally: {ex}"

@@ -1,6 +1,6 @@
 import os
 import subprocess
-import shutil
+
 
 def run_project_vpa_scan(
     project_id: str = "",
@@ -24,7 +24,6 @@ def run_project_vpa_scan(
         A success message with paths to generated files, or an error description.
     """
     try:
-        # Resolve repo root path dynamically (robust to subfolders/agents)
         repo_root = os.path.abspath(__file__)
         while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
             parent = os.path.dirname(repo_root)
@@ -32,11 +31,16 @@ def run_project_vpa_scan(
                 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 break
             repo_root = parent
-        scan_script = os.path.join(repo_root, "tools", "scan_and_generate.py")
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        scan_script = os.path.join(current_dir, "scan_and_generate.py")
+        if not os.path.exists(scan_script):
+            scan_script = os.path.join(repo_root, "tools", "scan_and_generate.py")
+
         results_dir = os.path.join(repo_root, "results")
-        
+
         print(f"Starting GKE VPA Scraper: project={project_id or 'auto'}, clusters={cluster_filter or 'all'}, namespace={namespace_filter}, workload={workload_filter or 'all'}, include_system={include_system}...")
-        
+
         cmd = ["python3", scan_script]
         if project_id:
             cmd.extend(["--project-id", project_id])
@@ -48,12 +52,12 @@ def run_project_vpa_scan(
             cmd.extend(["--workload", workload_filter])
         if include_system:
             cmd.extend(["--include-system"])
-            
+
         res = subprocess.run(
             cmd,
             capture_output=True, text=True, check=True
         )
-        
+
         return (
             f"SUCCESS: GKE VPA scan completed successfully.\n"
             f"Consolidated report generated at: {os.path.join(results_dir, 'vpa_recommendations_report.md')}\n"

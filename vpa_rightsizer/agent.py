@@ -1,9 +1,13 @@
 from google.adk.agents.llm_agent import Agent
 from google.adk.tools import request_input
 
-from .tools.scraper_tool import run_project_vpa_scan
 from .tools.builder_tool import compile_web_dashboard
-from .tools.deployer_tool import deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, deploy_dashboard_locally
+from .tools.deployer_tool import (
+    deploy_dashboard_locally,
+    deploy_dashboard_to_cloud_run,
+    deploy_dashboard_to_gke,
+)
+from .tools.scraper_tool import run_project_vpa_scan
 
 root_agent = Agent(
     name="vpa_rightsizer",
