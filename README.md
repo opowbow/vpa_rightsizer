@@ -31,11 +31,19 @@ Before you begin, ensure you have:
 You can set up and run this agent locally in two ways depending on your preferred interface:
 
 ### ⚙️ Initial Setup
-Install `agents-cli` and setup skills:
-```bash
-uvx google-agents-cli setup
-agents-cli install
-```
+1. Install `agents-cli` and setup skills:
+   ```bash
+   uvx google-agents-cli setup
+   agents-cli install
+   ```
+
+2. **Configure environment variables**:
+   Create a local `.env` file from the template:
+   ```bash
+   cp .env.example .env
+   ```
+   Open the `.env` file and configure either Vertex AI or Gemini API credentials to prevent model connection errors. See the inline comments in `.env.example` for details.
+
 
 ---
 
