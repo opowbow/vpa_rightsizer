@@ -8,6 +8,65 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <style>
+        .card-savings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0 4px 0;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .savings-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+        }
+        .savings-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .savings-high-badge {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .savings-negative-badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .savings-neutral-badge {
+            background: rgba(148, 163, 184, 0.15);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        /* Custom styled table badges for increase/decrease */
+        .savings-increase {
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .savings-neutral {
+            background: rgba(148, 163, 184, 0.12);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
     <div class="glass-bg"></div>
@@ -396,34 +455,126 @@
         function parseCpu(cpuStr) {
             if (!cpuStr) return 0;
             cpuStr = cpuStr.trim();
-            if (cpuStr.endsWith('m')) return parseFloat(cpuStr);
-            return parseFloat(cpuStr) * 1000;
+            const match = cpuStr.match(/^([0-9.]+)\s*([a-zA-Z]*)$/);
+            if (!match) return 0;
+            const val = parseFloat(match[1]);
+            const unit = match[2];
+            
+            if (unit === 'm') {
+                return val; // millicores
+            }
+            // Otherwise, it's cores, convert to millicores
+            return val * 1000;
         }
 
         function parseMem(memStr) {
             if (!memStr) return 0;
             memStr = memStr.trim();
-            if (memStr.endsWith('Mi')) return parseFloat(memStr);
-            if (memStr.endsWith('Gi')) return parseFloat(memStr) * 1024;
-            if (memStr.endsWith('Ki')) return parseFloat(memStr) / 1024;
-            return parseFloat(memStr) / (1024 * 1024);
+            const match = memStr.match(/^([0-9.]+)\s*([a-zA-Z]*)$/);
+            if (!match) return 0;
+            const val = parseFloat(match[1]);
+            const unit = match[2];
+            
+            // Normalize all to binary MiB
+            switch(unit) {
+                case 'Ki':
+                case 'KiB':
+                    return val / 1024;
+                case 'k':
+                case 'kB':
+                case 'K':
+                case 'KB':
+                    return val * 1000 / (1024 * 1024);
+                case 'Mi':
+                case 'MiB':
+                    return val;
+                case 'm':
+                case 'M':
+                case 'MB':
+                    return val * 1000 * 1000 / (1024 * 1024);
+                case 'Gi':
+                case 'GiB':
+                    return val * 1024;
+                case 'G':
+                case 'GB':
+                    return val * 1000 * 1000 * 1000 / (1024 * 1024);
+                case 'Ti':
+                case 'TiB':
+                    return val * 1024 * 1024;
+                case 'T':
+                case 'TB':
+                    return val * 1000 * 1000 * 1000 * 1000 / (1024 * 1024);
+                default:
+                    // If no unit, assume bytes, convert to MiB
+                    return val / (1024 * 1024);
+            }
         }
 
-        // Calculate cost reduction ratio of a workload
+        // Calculate cost reduction ratio of a workload using weighted GKE General-Purpose pricing:
+        // CPU millicores and memory MiB costs are compared to get the exact cost reduction percentage.
         function calculateReduction(w) {
             const currCpu = parseCpu(w.current.cpu);
             const recCpu = parseCpu(w.recommended.cpu);
             const currMem = parseMem(w.current.memory);
             const recMem = parseMem(w.recommended.memory);
             
-            let cpuPct = 0;
-            if (currCpu > 0) cpuPct = Math.max(0, (currCpu - recCpu) / currCpu);
+            if (currCpu === 0 && currMem === 0) return 0;
             
-            let memPct = 0;
-            if (currMem > 0) memPct = Math.max(0, (currMem - recMem) / currMem);
+            // General-purpose pricing on GCP (e.g. us-central1):
+            // CPU: $0.04456 per vCPU-hour = $0.00004456 per millicore-hour
+            // Memory: $0.004922 per GiB-hour = $0.0000048066 per MiB-hour
+            const currCost = (currCpu * 0.00004456) + (currMem * 0.0000048066);
+            const recCost = (recCpu * 0.00004456) + (recMem * 0.0000048066);
             
-            // Average of CPU and Memory reductions
-            return (cpuPct + memPct) / 2;
+            if (currCost === 0) return 0;
+            
+            return (currCost - recCost) / currCost;
+        }
+
+        function getResourceChangeHtml(currentStr, recommendedStr, isCpu) {
+            const current = isCpu ? parseCpu(currentStr) : parseMem(currentStr);
+            const recommended = isCpu ? parseCpu(recommendedStr) : parseMem(recommendedStr);
+
+            if (current === 0 && recommended === 0) {
+                return `<span class="bar-pct" style="color: #cbd5e1;">➔ 0%</span>`;
+            }
+            if (current === 0) {
+                return `<span class="bar-pct" style="color: #f87171; font-weight: 700;">↗ 100%</span>`;
+            }
+
+            const pctChange = ((recommended - current) / current) * 100;
+            const rounded = Math.round(pctChange);
+
+            if (rounded < 0) {
+                return `<span class="bar-pct" style="color: #4ade80; font-weight: 700;">↘ ${Math.abs(rounded)}%</span>`;
+            } else if (rounded > 0) {
+                return `<span class="bar-pct" style="color: #f87171; font-weight: 700;">↗ ${rounded}%</span>`;
+            } else {
+                return `<span class="bar-pct" style="color: #cbd5e1;">➔ 0%</span>`;
+            }
+        }
+
+        function getResourceChangeArrowHtml(currentStr, recommendedStr, isCpu) {
+            const current = isCpu ? parseCpu(currentStr) : parseMem(currentStr);
+            const recommended = isCpu ? parseCpu(recommendedStr) : parseMem(recommendedStr);
+
+            if (current === 0 && recommended === 0) {
+                return `<span style="color: #cbd5e1; font-weight: 600; margin: 0 4px;">➔</span>`;
+            }
+            if (current === 0) {
+                return `<span style="color: #f87171; font-weight: 600; margin: 0 4px;">↗</span>`;
+            }
+
+            const pctChange = ((recommended - current) / current) * 100;
+            const rounded = Math.round(pctChange);
+
+            if (rounded < 0) {
+                return `<span style="color: #4ade80; font-weight: 700; margin: 0 4px;">↘</span>`;
+            } else if (rounded > 0) {
+                return `<span style="color: #f87171; font-weight: 700; margin: 0 4px;">↗</span>`;
+            } else {
+                return `<span style="color: #cbd5e1; font-weight: 600; margin: 0 4px;">➔</span>`;
+            }
         }
 
         function populateSummary() {
@@ -436,13 +587,23 @@
             const pct = dashboardData.workloads.length > 0 ? Math.round((summary.vpaEnabledCount / dashboardData.workloads.length) * 100) : 0;
             document.getElementById('stat-vpa-pct').innerText = `${pct}% of Workloads Enabled`;
 
-            // Calculate overall cluster average resource reduction
-            let totalReduction = 0;
+            // Calculate overall cluster average resource reduction on a cost-weighted basis
+            let totalCurrentCost = 0;
+            let totalRecommendedCost = 0;
             dashboardData.workloads.forEach(w => {
-                totalReduction += calculateReduction(w);
+                const currCpu = parseCpu(w.current.cpu);
+                const recCpu = parseCpu(w.recommended.cpu);
+                const currMem = parseMem(w.current.memory);
+                const recMem = parseMem(w.recommended.memory);
+                
+                const currCost = (currCpu * 0.00004456) + (currMem * 0.0000048066);
+                const recCost = (recCpu * 0.00004456) + (recMem * 0.0000048066);
+                
+                totalCurrentCost += currCost;
+                totalRecommendedCost += recCost;
             });
-            const avgReduction = dashboardData.workloads.length > 0 ? (totalReduction / dashboardData.workloads.length) : 0;
-            document.getElementById('stat-cost-opt').innerText = `${Math.round(avgReduction * 1000) / 10}%`;
+            const overallReduction = totalCurrentCost > 0 ? (totalCurrentCost - totalRecommendedCost) / totalCurrentCost : 0;
+            document.getElementById('stat-cost-opt').innerText = `${Math.round(overallReduction * 1000) / 10}%`;
 
             // Render GKE cluster supports
             const clusterListEl = document.getElementById('stat-clusters');
@@ -490,8 +651,9 @@
         }
 
         function populateSpotlight() {
-            // Sort workloads descending by reduction percentage
-            const sorted = [...dashboardData.workloads].sort((a, b) => calculateReduction(b) - calculateReduction(a));
+            // Sort workloads descending by reduction percentage (only over-provisioned workloads)
+            const overProvisioned = dashboardData.workloads.filter(w => calculateReduction(w) > 0);
+            const sorted = overProvisioned.sort((a, b) => calculateReduction(b) - calculateReduction(a));
             const top5 = sorted.slice(0, 5);
 
             if (top5.length === 0) {
@@ -515,19 +677,22 @@
                         <h3>${w.workloadName}</h3>
                         <span class="rank-badge">#${idx + 1}</span>
                     </div>
-                    <span class="cluster-tag">${w.cluster}</span>
+                    <div class="tags-row" style="margin-bottom: 14px;">
+                        <span class="tag cluster-t">${w.cluster}</span>
+                        <span class="tag ns-t">${w.namespace}</span>
+                    </div>
                     <div class="metrics-lines">
                         <div class="metric-line">
                             <span class="lbl">CPU</span>
-                            <span class="vals"><code>${w.current.cpu}</code> ↘ <code>${w.recommended.cpu}</code></span>
+                            <span class="vals"><code>${w.current.cpu}</code> ${getResourceChangeArrowHtml(w.current.cpu, w.recommended.cpu, true)} <code>${w.recommended.cpu}</code></span>
                         </div>
                         <div class="metric-line">
                             <span class="lbl">Memory</span>
-                            <span class="vals"><code>${w.current.memory}</code> ↘ <code>${w.recommended.memory}</code></span>
+                            <span class="vals"><code>${w.current.memory}</code> ${getResourceChangeArrowHtml(w.current.memory, w.recommended.memory, false)} <code>${w.recommended.memory}</code></span>
                         </div>
                     </div>
                     <div class="reduction-badge">
-                        <span class="arrow">↘</span> ${pct}% reduction
+                        <span class="arrow">↘</span> ${pct}% savings
                     </div>
                 `;
                 spotlightContainer.appendChild(card);
@@ -604,6 +769,32 @@
                 const recMem = parseMem(w.recommended.memory);
                 const memWidth = currMem > 0 ? Math.min(100, (recMem / currMem) * 100) : 100;
 
+                // Savings badge for Card view
+                const reductionPct = Math.round(calculateReduction(w) * 100);
+                let savingsDeltaHtml = '';
+                if (reductionPct > 0) {
+                    savingsDeltaHtml = `
+                        <div class="card-savings-row">
+                            <span class="savings-label">Savings Delta:</span>
+                            <span class="savings-badge savings-high-badge">↘ ${reductionPct}% Reduce</span>
+                        </div>
+                    `;
+                } else if (reductionPct < 0) {
+                    savingsDeltaHtml = `
+                        <div class="card-savings-row">
+                            <span class="savings-label">Savings Delta:</span>
+                            <span class="savings-badge savings-negative-badge">↗ +${Math.abs(reductionPct)}% Increase</span>
+                        </div>
+                    `;
+                } else {
+                    savingsDeltaHtml = `
+                        <div class="card-savings-row">
+                            <span class="savings-label">Savings Delta:</span>
+                            <span class="savings-badge savings-neutral-badge">➔ 0% Change</span>
+                        </div>
+                    `;
+                }
+
                 const card = document.createElement('div');
                 card.className = `workload-item-card glass ${topBorderColor}`;
                 card.innerHTML = `
@@ -618,7 +809,7 @@
                     <div class="card-bar-container">
                         <div class="bar-info-row">
                             <span class="lbl">CPU: <strong>${w.current.cpu}</strong> ➔ <strong>${w.recommended.cpu}</strong></span>
-                            <span class="bar-pct">${Math.round(cpuWidth)}% size</span>
+                            ${getResourceChangeHtml(w.current.cpu, w.recommended.cpu, true)}
                         </div>
                         <div class="progress-track">
                             <div class="progress-bar-fill cpu-bar" style="width: ${cpuWidth}%"></div>
@@ -627,12 +818,13 @@
                     <div class="card-bar-container">
                         <div class="bar-info-row">
                             <span class="lbl">Mem: <strong>${w.current.memory}</strong> ➔ <strong>${w.recommended.memory}</strong></span>
-                            <span class="bar-pct">${Math.round(memWidth)}% size</span>
+                            ${getResourceChangeHtml(w.current.memory, w.recommended.memory, false)}
                         </div>
                         <div class="progress-track">
                             <div class="progress-bar-fill mem-bar" style="width: ${memWidth}%"></div>
                         </div>
                     </div>
+                    ${savingsDeltaHtml}
                     <div class="card-footer-row">
                         <div class="yaml-file">
                             <span class="file-ic">📄</span> ${w.manifestName || (w.workloadName + '.yaml')}
@@ -656,6 +848,18 @@
                     badgeClass = 'status-badge-warn';
                 }
 
+                // Table savings style and content based on reductionPct:
+                let savingsBadgeHtml = '';
+                if (reductionPct > 30) {
+                    savingsBadgeHtml = `<span class="opt-savings savings-high">↘ ${reductionPct}% Reduce</span>`;
+                } else if (reductionPct > 0) {
+                    savingsBadgeHtml = `<span class="opt-savings savings-med">↘ ${reductionPct}% Reduce</span>`;
+                } else if (reductionPct < 0) {
+                    savingsBadgeHtml = `<span class="opt-savings savings-increase">↗ +${Math.abs(reductionPct)}% Increase</span>`;
+                } else {
+                    savingsBadgeHtml = `<span class="opt-savings savings-neutral">➔ 0% Change</span>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${w.cluster}</strong></td>
@@ -676,9 +880,7 @@
                         </div>
                     </td>
                     <td>
-                        <span class="opt-savings ${reductionPct > 30 ? 'savings-high' : 'savings-med'}">
-                            ↘ ${reductionPct}% Reduce
-                        </span>
+                        ${savingsBadgeHtml}
                     </td>
                     <td>
                         <button class="action-btn glass" onclick="showYaml('${w.cluster}', '${w.namespace}', '${w.workloadName}', '${w.manifestPath}', '${w.manifestName}')">

@@ -59,3 +59,7 @@ root_agent = Agent(
     """,
     tools=[run_project_vpa_scan, compile_web_dashboard, deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, deploy_dashboard_locally, request_input],
 )
+
+from google.adk.apps import App
+
+app = App(root_agent=root_agent, name="vpa_rightsizer")
