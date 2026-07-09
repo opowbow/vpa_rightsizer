@@ -13,8 +13,14 @@ def compile_web_dashboard() -> str:
         A success message, or error details.
     """
     try:
-        # Resolve repo root path dynamically
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Resolve repo root path dynamically (robust to subfolders/agents)
+        repo_root = os.path.abspath(__file__)
+        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+            parent = os.path.dirname(repo_root)
+            if parent == repo_root:
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                break
+            repo_root = parent
         report_path = os.path.join(repo_root, "results", "vpa_recommendations_report.md")
         output_path = os.path.join(repo_root, "vpa-web-report", "public", "vpa-data.json")
         results_dir = os.path.join(repo_root, "results")

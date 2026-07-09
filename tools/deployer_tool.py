@@ -58,8 +58,14 @@ def deploy_dashboard_to_gke(cluster_name: str, project_id: str = "") -> str:
         ]
         subprocess.run(create_repo_cmd, capture_output=True, text=True)
         
-        # 3. Build and Push image using Cloud Build
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # 3. Build and Push image using Cloud Build (robust path resolution)
+        repo_root = os.path.abspath(__file__)
+        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+            parent = os.path.dirname(repo_root)
+            if parent == repo_root:
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                break
+            repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
         image_tag = f"{region_sub}-docker.pkg.dev/{project_id}/gke-repo/vpa-web-report:latest"
         
@@ -166,8 +172,14 @@ def deploy_dashboard_to_cloud_run(project_id: str = "", region: str = "europe-we
         # Run and ignore if already exists
         subprocess.run(create_repo_cmd, capture_output=True, text=True)
         
-        # 2. Build via Cloud Build
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # 2. Build via Cloud Build (robust path resolution)
+        repo_root = os.path.abspath(__file__)
+        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+            parent = os.path.dirname(repo_root)
+            if parent == repo_root:
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                break
+            repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
         image_tag = f"{region}-docker.pkg.dev/{project_id}/vpa-repo/vpa-web-report:latest"
         
@@ -245,8 +257,14 @@ def deploy_dashboard_locally(port: int = 8080) -> str:
                 return True
 
     try:
-        # 1. Resolve web report directory and server script
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # 1. Resolve web report directory and server script (robust path resolution)
+        repo_root = os.path.abspath(__file__)
+        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+            parent = os.path.dirname(repo_root)
+            if parent == repo_root:
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                break
+            repo_root = parent
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
         server_script = os.path.join(repo_root, "tools", "local_server.py")
         

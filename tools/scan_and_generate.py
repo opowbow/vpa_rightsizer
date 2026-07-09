@@ -79,8 +79,14 @@ def main():
 
     print(f"Target clusters for scanning: {[c['name'] for c in target_clusters]}")
 
-    # Create results folder
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # Create results folder (robust to subfolders/agents)
+    repo_root = os.path.abspath(__file__)
+    while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+        parent = os.path.dirname(repo_root)
+        if parent == repo_root:
+            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            break
+        repo_root = parent
     results_dir = os.path.join(repo_root, "results")
     os.makedirs(results_dir, exist_ok=True)
 

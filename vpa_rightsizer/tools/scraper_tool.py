@@ -24,8 +24,14 @@ def run_project_vpa_scan(
         A success message with paths to generated files, or an error description.
     """
     try:
-        # Resolve repo root path dynamically
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Resolve repo root path dynamically (robust to subfolders/agents)
+        repo_root = os.path.abspath(__file__)
+        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+            parent = os.path.dirname(repo_root)
+            if parent == repo_root:
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                break
+            repo_root = parent
         scan_script = os.path.join(repo_root, "tools", "scan_and_generate.py")
         results_dir = os.path.join(repo_root, "results")
         
