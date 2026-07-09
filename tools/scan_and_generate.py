@@ -20,10 +20,30 @@ def main():
     args = parser.parse_args()
 
     project_id = args.project_id
-    if not project_id:
+    if not project_id or project_id.lower() == "auto":
+        # 1. Try querying the GCP Metadata Server (highly robust inside Agent Platform/GCP)
+        import urllib.request
         try:
-            project_id = run_cmd(["gcloud", "config", "get-value", "project"])
+            req = urllib.request.Request(
+                "http://metadata.google.internal/computeMetadata/v1/project/project-id",
+                headers={"Metadata-Flavor": "Google"}
+            )
+            with urllib.request.urlopen(req, timeout=2) as response:
+                project_id = response.read().decode("utf-8").strip()
         except Exception:
+            project_id = ""
+
+        # 2. Try gcloud config
+        if not project_id or project_id == "(unset)":
+            try:
+                gcloud_project = run_cmd(["gcloud", "config", "get-value", "project"])
+                if gcloud_project and gcloud_project != "(unset)":
+                    project_id = gcloud_project
+            except Exception:
+                pass
+
+        # 3. Fallback default
+        if not project_id or project_id == "(unset)":
             project_id = "op-hack-001"
 
     print(f"Using Project: {project_id}")

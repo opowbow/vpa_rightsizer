@@ -1,7 +1,7 @@
 {
-  "remote_agent_runtime_id": "projects/689655113118/locations/europe-west1/reasoningEngines/3608887433430564864",
+  "remote_agent_runtime_id": "projects/689655113118/locations/europe-west1/reasoningEngines/3154023871066144768",
   "deployment_target": "agent_runtime",
   "is_a2a": false,
   "agent_directory": ".",
-  "deployment_timestamp": "2026-07-09T11:54:19.631357+00:00"
+  "deployment_timestamp": "2026-07-09T13:50:13.220045+00:00"
 }
