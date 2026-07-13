@@ -8,21 +8,27 @@ def compile_web_dashboard() -> str:
     """
     Natively parses the generated GKE scraper markdown report into a structured JSON dataset
     and copies the hierarchical deployment manifests into the web dashboard build directory.
-    
+
     Returns:
         A success message, or error details.
     """
     try:
         # Resolve repo root path dynamically (robust to subfolders/agents)
         repo_root = os.path.abspath(__file__)
-        while repo_root and not os.path.exists(os.path.join(repo_root, "pyproject.toml")):
+        while repo_root and not os.path.exists(
+            os.path.join(repo_root, "pyproject.toml")
+        ):
             parent = os.path.dirname(repo_root)
             if parent == repo_root:
                 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 break
             repo_root = parent
-        report_path = os.path.join(repo_root, "results", "vpa_recommendations_report.md")
-        output_path = os.path.join(repo_root, "vpa-web-report", "public", "vpa-data.json")
+        report_path = os.path.join(
+            repo_root, "results", "vpa_recommendations_report.md"
+        )
+        output_path = os.path.join(
+            repo_root, "vpa-web-report", "public", "vpa-data.json"
+        )
         results_dir = os.path.join(repo_root, "results")
         web_report_dir = os.path.join(repo_root, "vpa-web-report")
 
@@ -103,36 +109,50 @@ def compile_web_dashboard() -> str:
                     manifest_name = clean(parts[10])
                     manifest_path = parts[10]
 
-                workloads.append({
-                    "cluster": cluster,
-                    "namespace": namespace,
-                    "workloadName": workload_name,
-                    "vpaStatus": vpa_status,
-                    "containerName": container_name,
-                    "current": current,
-                    "recommended": recommended,
-                    "lowerBound": lower_bound,
-                    "upperBound": upper_bound,
-                    "manifestName": manifest_name,
-                    "manifestPath": manifest_path
-                })
+                workloads.append(
+                    {
+                        "cluster": cluster,
+                        "namespace": namespace,
+                        "workloadName": workload_name,
+                        "vpaStatus": vpa_status,
+                        "containerName": container_name,
+                        "current": current,
+                        "recommended": recommended,
+                        "lowerBound": lower_bound,
+                        "upperBound": upper_bound,
+                        "manifestName": manifest_name,
+                        "manifestPath": manifest_path,
+                    }
+                )
 
         # Extract summary details using regex
         total_workloads = len(workloads)
-        total_match = re.search(r"(?:Total Workloads Analyzed|Total Non-System Workloads Found)\*\*:\s*(\d+)", content, re.IGNORECASE)
+        total_match = re.search(
+            r"(?:Total Workloads Analyzed|Total Non-System Workloads Found)\*\*:\s*(\d+)",
+            content,
+            re.IGNORECASE,
+        )
         if total_match:
             total_workloads = int(total_match.group(1))
 
-        vpa_enabled_count = len([w for w in workloads if w["vpaStatus"].startswith("Yes")])
-        enabled_match = re.search(r"(?:VPA Enabled Workloads|Workloads with VPA Enabled)\*\*:\s*(\d+)", content, re.IGNORECASE)
+        vpa_enabled_count = len(
+            [w for w in workloads if w["vpaStatus"].startswith("Yes")]
+        )
+        enabled_match = re.search(
+            r"(?:VPA Enabled Workloads|Workloads with VPA Enabled)\*\*:\s*(\d+)",
+            content,
+            re.IGNORECASE,
+        )
         if enabled_match:
             vpa_enabled_count = int(enabled_match.group(1))
 
         cluster_vpa_status = {}
-        support_match = re.search(r"VPA Support by Cluster\*\*:\s*([\s\S]*?)(?=\n\n|\n---)", content)
+        support_match = re.search(
+            r"VPA Support by Cluster\*\*:\s*([\s\S]*?)(?=\n\n|\n---)", content
+        )
         if support_match:
-            for l in support_match.group(1).split("\n"):
-                m = re.search(r"`([^`]+)`:\s*\*\*(.*?)\*\*", l)
+            for line in support_match.group(1).split("\n"):
+                m = re.search(r"`([^`]+)`:\s*\*\*(.*?)\*\*", line)
                 if m:
                     cluster_vpa_status[m.group(1)] = m.group(2)
 
@@ -140,9 +160,9 @@ def compile_web_dashboard() -> str:
             "summary": {
                 "totalWorkloads": total_workloads,
                 "vpaEnabledCount": vpa_enabled_count,
-                "clusterVpaStatus": cluster_vpa_status
+                "clusterVpaStatus": cluster_vpa_status,
             },
-            "workloads": workloads
+            "workloads": workloads,
         }
 
         with open(output_path, "w", encoding="utf-8") as f:
@@ -152,7 +172,9 @@ def compile_web_dashboard() -> str:
         copied_folders = []
         if os.path.exists(results_dir):
             for item in os.listdir(results_dir):
-                if item.startswith("vpa-") and os.path.isdir(os.path.join(results_dir, item)):
+                if item.startswith("vpa-") and os.path.isdir(
+                    os.path.join(results_dir, item)
+                ):
                     src_dir = os.path.join(results_dir, item)
                     dest_dir = os.path.join(web_report_dir, item)
                     if os.path.exists(dest_dir):
@@ -174,5 +196,3 @@ def compile_web_dashboard() -> str:
         )
     except Exception as ex:
         return f"ERROR: Unexpected exception compiling web dashboard natively: {ex}"
-
-

@@ -7,21 +7,22 @@ import sys
 class VPAReportHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         # Clean path from query strings or hashes
-        clean_path = path.split('?')[0].split('#')[0]
+        clean_path = path.split("?")[0].split("#")[0]
 
         # If it starts with /vpa-, it's a manifest request
-        if clean_path.startswith('/vpa-'):
-            full_path = os.path.join(os.getcwd(), clean_path.lstrip('/'))
+        if clean_path.startswith("/vpa-"):
+            full_path = os.path.join(os.getcwd(), clean_path.lstrip("/"))
             if os.path.exists(full_path) and os.path.isfile(full_path):
                 return full_path
 
         # If it exists under public directory
-        public_path = os.path.join(os.getcwd(), "public", clean_path.lstrip('/'))
+        public_path = os.path.join(os.getcwd(), "public", clean_path.lstrip("/"))
         if os.path.exists(public_path) and os.path.isfile(public_path):
             return public_path
 
         # Fallback to index.html for SPA routing
         return os.path.join(os.getcwd(), "public", "index.html")
+
 
 def main():
     if len(sys.argv) < 3:
@@ -44,6 +45,7 @@ def main():
         except KeyboardInterrupt:
             print("\nShutting down local server...")
             httpd.shutdown()
+
 
 if __name__ == "__main__":
     main()

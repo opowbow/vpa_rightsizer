@@ -1,4 +1,5 @@
 from google.adk.agents.llm_agent import Agent
+from google.adk.apps import App
 from google.adk.tools import request_input
 
 from .tools.builder_tool import compile_web_dashboard
@@ -49,7 +50,7 @@ root_agent = Agent(
          * Option C: A specific GKE Cluster scanned during step 1.
        - Use the 'request_input' tool to gather this preference. If the user doesn't specify or wants the default, proceed with Local Service (Option A).
        - If the user selects GKE, ask them to specify *which* GKE cluster name they want to install the `vpa-web-report` service on (list the available scanned GKE clusters as options!).
-       
+
     4. DEPLOYMENT ROLLOUT (ONLY IF DATA EXISTS):
        - If they selected Local Service:
          * Call 'deploy_dashboard_locally' with 'port' (default 8080).
@@ -58,12 +59,17 @@ root_agent = Agent(
        - If they selected a GKE Cluster:
          * Call 'deploy_dashboard_to_gke' with 'cluster_name' (the cluster selected by the user) and 'project_id').
        - Present the final live public/local dashboard URL returned by the tools to the user.
-       
+
     Provide a professional, concise progress report to the team at each stage.
     """,
-    tools=[run_project_vpa_scan, compile_web_dashboard, deploy_dashboard_to_gke, deploy_dashboard_to_cloud_run, deploy_dashboard_locally, request_input],
+    tools=[
+        run_project_vpa_scan,
+        compile_web_dashboard,
+        deploy_dashboard_to_gke,
+        deploy_dashboard_to_cloud_run,
+        deploy_dashboard_locally,
+        request_input,
+    ],
 )
-
-from google.adk.apps import App
 
 app = App(root_agent=root_agent, name="vpa_rightsizer")

@@ -7,13 +7,17 @@ Agent generated with `agents-cli` version `1.0.0`
 
 ```
 vpa-rightsizer/
-├── vpa_rightsizer/         # Core agent code
-│   ├── agent.py               # Main agent logic
-│   ├── fast_api_app.py        # FastAPI Backend server
-│   └── app_utils/             # App utilities and helpers
-├── tests/                     # Unit, integration, and load tests
-├── GEMINI.md                  # AI-assisted development guide
-└── pyproject.toml             # Project dependencies
+├── vpa_rightsizer/         # Core agent package
+│   ├── agent.py               # Main agent logic & platform App
+│   ├── fast_api_app.py        # FastAPI backend server
+│   ├── app_utils/             # Telemetry, reasoning engine, and API helpers
+│   └── tools/                 # Scraper, builder, and cloud/local deployer tools
+├── tests/                     # Integration and server E2E tests
+├── .agents/                   # Built-in agent skills
+├── AGENTS.md                  # Developer guidelines and operational playbooks
+├── GEMINI.md                  # AI development settings and context
+├── Dockerfile                 # Production container image configuration
+└── pyproject.toml             # Hatch packaging and dependency configurations
 ```
 
 > 💡 **Tip:** Use [Antigravity CLI](https://antigravity.google/) for AI-assisted development - project context is pre-configured in `GEMINI.md`.
